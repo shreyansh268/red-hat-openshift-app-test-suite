@@ -6,6 +6,9 @@ Pytest-based test framework for a Python application deployed on Red Hat OpenShi
 
 ---
 
+<img width="502" height="231" alt="image" src="https://github.com/user-attachments/assets/c7b537d7-e37b-44d7-b0d9-0b2aa887da35" />
+
+
 ## Structure
 
 ```
