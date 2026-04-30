@@ -1,0 +1,11 @@
+{
+  "item": {
+    "name": "test-item",
+    "description": "Automated test item — safe to delete",
+    "tags": ["test", "automated"]
+  },
+  "user": {
+    "username": "test-user",
+    "email": "test@example.com"
+  }
+}

@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+testpaths = ["smoke", "integration", "e2e"]
+markers = [
+    "smoke: fast gate tests — must pass before other suites run",
+    "integration: service-level API tests",
+    "e2e: full user flow tests against live cluster",
+]
+addopts = "--tb=short -v --timeout=60"

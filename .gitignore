@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Pytest
+.pytest_cache/
+tests/results/*.xml
+tests/results/*.html
+# keep the directory itself
+!tests/results/.gitkeep
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

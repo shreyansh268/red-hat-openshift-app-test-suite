@@ -1,0 +1,153 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+      suite:
+        description: Test suite to run
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, integration, e2e, all]
+      namespace:
+        description: "OpenShift namespace/project (leave blank to use current project)"
+        required: false
+        default: ""
+
+jobs:
+  # ── 1. Preflight: authenticate, discover APP_URL, wait for readiness ─────────
+  preflight:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      app_url: ${{ steps.get-route.outputs.url }}
+      namespace: ${{ steps.set-ns.outputs.namespace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install oc CLI
+        run: |
+          curl -sL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz \
+            | tar xz -C /usr/local/bin oc kubectl
+
+      - name: OC login
+        run: |
+          oc login "${{ secrets.OC_SERVER }}" \
+            --token="${{ secrets.OC_TOKEN }}" \
+            --insecure-skip-tls-verify=true
+
+      - name: Resolve namespace
+        id: set-ns
+        run: |
+          NS="${{ inputs.namespace }}"
+          [[ -z "$NS" ]] && NS=$(oc project -q)
+          echo "namespace=${NS}" >> "$GITHUB_OUTPUT"
+
+      - name: Get app route URL
+        id: get-route
+        run: |
+          HOST=$(oc get route my-app \
+            -n "${{ steps.set-ns.outputs.namespace }}" \
+            -o jsonpath='{.spec.host}')
+          echo "url=https://${HOST}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for app to be ready
+        run: |
+          chmod +x tests/scripts/wait-for-ready.sh
+          tests/scripts/wait-for-ready.sh "${{ steps.get-route.outputs.url }}"
+
+  # ── 2. Smoke — fast gate, always runs ────────────────────────────────────────
+  smoke:
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        working-directory: tests
+        env:
+          APP_URL: ${{ needs.preflight.outputs.app_url }}
+          OC_SERVER: ${{ secrets.OC_SERVER }}
+          OC_TOKEN: ${{ secrets.OC_TOKEN }}
+          OC_NAMESPACE: ${{ needs.preflight.outputs.namespace }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        run: docker compose run --rm smoke
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-results
+          path: tests/results/smoke.xml
+
+  # ── 3. Integration — runs in parallel with e2e after smoke passes ─────────────
+  integration:
+    needs: [preflight, smoke]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    if: ${{ inputs.suite == 'integration' || inputs.suite == 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run integration tests
+        working-directory: tests
+        env:
+          APP_URL: ${{ needs.preflight.outputs.app_url }}
+          OC_SERVER: ${{ secrets.OC_SERVER }}
+          OC_TOKEN: ${{ secrets.OC_TOKEN }}
+          OC_NAMESPACE: ${{ needs.preflight.outputs.namespace }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: docker compose run --rm integration
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-results
+          path: tests/results/integration.xml
+
+  # ── 4. E2E — runs in parallel with integration after smoke passes ─────────────
+  e2e:
+    needs: [preflight, smoke]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    if: ${{ inputs.suite == 'e2e' || inputs.suite == 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run e2e tests
+        working-directory: tests
+        env:
+          APP_URL: ${{ needs.preflight.outputs.app_url }}
+          OC_SERVER: ${{ secrets.OC_SERVER }}
+          OC_TOKEN: ${{ secrets.OC_TOKEN }}
+          OC_NAMESPACE: ${{ needs.preflight.outputs.namespace }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        run: docker compose run --rm e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: tests/results/e2e.xml
+
+  # ── 5. Report — always runs, collects all JUnit results ──────────────────────
+  report:
+    needs: [smoke, integration, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Publish test results summary
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: results/**/*.xml
+          comment_mode: off

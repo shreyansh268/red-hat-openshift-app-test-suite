@@ -1,0 +1,43 @@
+services:
+  smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command: pytest smoke/ -m smoke --junitxml=/results/smoke.xml
+    environment:
+      - APP_URL=${APP_URL}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - OC_SERVER=${OC_SERVER}
+      - OC_TOKEN=${OC_TOKEN}
+      - OC_NAMESPACE=${OC_NAMESPACE}
+    volumes:
+      - ./results:/results
+
+  integration:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command: pytest integration/ -m integration --junitxml=/results/integration.xml
+    environment:
+      - APP_URL=${APP_URL}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - OC_SERVER=${OC_SERVER}
+      - OC_TOKEN=${OC_TOKEN}
+      - OC_NAMESPACE=${OC_NAMESPACE}
+      - DB_URL=${DB_URL}
+    volumes:
+      - ./results:/results
+
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command: pytest e2e/ -m e2e --junitxml=/results/e2e.xml
+    environment:
+      - APP_URL=${APP_URL}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - OC_SERVER=${OC_SERVER}
+      - OC_TOKEN=${OC_TOKEN}
+      - OC_NAMESPACE=${OC_NAMESPACE}
+    volumes:
+      - ./results:/results
