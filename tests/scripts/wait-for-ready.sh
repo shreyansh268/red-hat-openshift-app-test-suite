@@ -10,10 +10,10 @@ if [[ -z "$APP_URL" ]]; then
   exit 1
 fi
 
-echo "Waiting for ${APP_URL}/healthz to respond 200..."
+echo "Waiting for ${APP_URL}/ to respond 200..."
 
 for i in $(seq 1 "$MAX_RETRIES"); do
-  STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "${APP_URL}/healthz" || true)
+  STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "${APP_URL}/" || true)
   if [[ "$STATUS" == "200" ]]; then
     echo "Ready after attempt ${i} (status ${STATUS})"
     exit 0

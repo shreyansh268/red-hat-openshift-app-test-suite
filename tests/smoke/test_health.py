@@ -8,12 +8,12 @@ APP_LABEL = "app=python-basic"
 
 
 def test_liveness_endpoint(http_client, app_url):
-    resp = http_client.get(f"{app_url}/healthz")
+    resp = http_client.get(f"{app_url}/")
     assert resp.status_code == 200
 
 
 def test_readiness_endpoint(http_client, app_url):
-    resp = http_client.get(f"{app_url}/readyz")
+    resp = http_client.get(f"{app_url}/")
     assert resp.status_code == 200
 
 

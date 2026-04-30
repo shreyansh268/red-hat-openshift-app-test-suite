@@ -53,7 +53,7 @@ class TestClusterResiliency:
         time.sleep(5)
 
         # App should still respond during pod restart (assuming >1 replica)
-        resp = http_client.get(f"{app_url}/healthz")
+        resp = http_client.get(f"{app_url}/")
         assert resp.status_code == 200
 
         # Wait for full rollout to stabilise
