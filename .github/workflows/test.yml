@@ -51,7 +51,7 @@ jobs:
       - name: Get app route URL
         id: get-route
         run: |
-          HOST=$(oc get route my-app \
+          HOST=$(oc get route python-basic \
             -n "${{ steps.set-ns.outputs.namespace }}" \
             -o jsonpath='{.spec.host}')
           echo "url=https://${HOST}" >> "$GITHUB_OUTPUT"
